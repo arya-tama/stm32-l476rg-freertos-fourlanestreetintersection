@@ -67,33 +67,29 @@ typedef enum{
   Green
 } lightState;
 
-lightState LSR = Red;
-lightState LSY = Yellow;
-lightState LSG = Green;
-
 typedef enum{
   NS,
   SN,
   WE,
   EW
-} lightPos;
+} orientation;
 
 typedef struct{
-  lightPos pos;
+  orientation ori;
   lightState curState;
   lightState prevState;
-} trafficLight;
+} traffic;
 
 typedef struct{
-  int pos;
+  int ori;
   int timeout;
 } carGenerator;
 
 // Shared resources
-trafficLight NSTL;
-trafficLight EWTL;
-trafficLight SNTL;
-trafficLight WETL;
+traffic NST;
+traffic EWT;
+traffic SNT;
+traffic WET;
 uint8_t carPositions[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
@@ -152,11 +148,11 @@ const osMutexAttr_t myMutex01_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-void updateTrafficLightState(trafficLight* inputTrafficLight);
-uint32_t getDelayUpdateTrafficLightState(trafficLight inputTrafficLight);
-void displayTrafficLight(trafficLight inputTrafficLight);
+void updateTrafficLightState(traffic* inputTrafficLight);
+uint32_t getDelayUpdateTrafficLightState(traffic inputTrafficLight);
+void displayTrafficLight(traffic inputTrafficLight);
 void updateCarOnRoadWhileNotGreen(uint8_t* initialFirstTraffic, uint8_t* initialSecondTraffic);
-void updateCarOnRoad(uint8_t* initialFirstTraffic, uint8_t* initialSecondTraffic, trafficLight inputTrafficLight);
+void updateCarOnRoad(uint8_t* initialFirstTraffic, uint8_t* initialSecondTraffic, traffic inputTrafficLight);
 /* USER CODE END FunctionPrototypes */
 
 void StartUpdateTLNSState(void *argument);
@@ -176,18 +172,18 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
   // Init traffic light
-  NSTL.pos = NS;
-  NSTL.prevState = LSY;
-  NSTL.curState = LSG;
-  EWTL.pos = EW;
-  EWTL.prevState = LSY;
-  EWTL.curState = LSR;
-  SNTL.pos = SN;
-  SNTL.prevState = LSY;
-  SNTL.curState = LSG;
-  WETL.pos = WE;
-  WETL.prevState = LSY;
-  WETL.curState = LSR;
+  NST.ori = NS;
+  NST.prevState = Yellow;
+  NST.curState = Green;
+  EWT.ori = EW;
+  EWT.prevState = Yellow;
+  EWT.curState = Red;
+  SNT.ori = SN;
+  SNT.prevState = Yellow;
+  SNT.curState = Green;
+  WET.ori = WE;
+  WET.prevState = Yellow;
+  WET.curState = Red;
 
   srand(HAL_GetTick()); // Use system time as a simple seed
   /* USER CODE END Init */
@@ -253,11 +249,11 @@ void StartUpdateTLNSState(void *argument)
   /* Infinite loop */
   for(;;)
   {
-//    printf("StartUpdateTLNSState b = %d\n", NSTL.curState);
-    updateTrafficLightState(&NSTL);
-    updateTrafficLightState(&SNTL);
-    uint32_t delayValue = getDelayUpdateTrafficLightState(NSTL);
-//    printf("StartUpdateTLNSState a = %d %lu\n", NSTL.curState, delayValue);
+//    printf("StartUpdateTLNSState b = %d\n", NST.curState);
+    updateTrafficLightState(&NST);
+    updateTrafficLightState(&SNT);
+    uint32_t delayValue = getDelayUpdateTrafficLightState(NST);
+//    printf("StartUpdateTLNSState a = %d %lu\n", NST.curState, delayValue);
 	osDelay(delayValue);
   }
   /* USER CODE END StartUpdateTLNSState */
@@ -276,11 +272,11 @@ void StartUpdateTLEWState(void *argument)
   /* Infinite loop */
   for(;;)
   {
-//    printf("StartUpdateTLEWState b = %d\n", EWTL.curState);
-	updateTrafficLightState(&EWTL);
-	updateTrafficLightState(&WETL);
-	uint32_t delayValue = getDelayUpdateTrafficLightState(EWTL);
-//    printf("StartUpdateTLEWState a = %d %lu\n", EWTL.curState, delayValue);
+//    printf("StartUpdateTLEWState b = %d\n", EWT.curState);
+	updateTrafficLightState(&EWT);
+	updateTrafficLightState(&WET);
+	uint32_t delayValue = getDelayUpdateTrafficLightState(EWT);
+//    printf("StartUpdateTLEWState a = %d %lu\n", EWT.curState, delayValue);
 	osDelay(delayValue);
 
   }
@@ -300,10 +296,10 @@ void StartDisplayTL(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    displayTrafficLight(NSTL);
-	displayTrafficLight(EWTL);
-	displayTrafficLight(SNTL);
-	displayTrafficLight(WETL);
+    displayTrafficLight(NST);
+	displayTrafficLight(EWT);
+	displayTrafficLight(SNT);
+	displayTrafficLight(WET);
 	osDelay(displayTrafficLightsTimeout);
   }
   /* USER CODE END StartDisplayTL */
@@ -333,8 +329,8 @@ void StartUpdateTF(void *argument)
 		uint8_t updatedEastWest = carPositions[4];
 //		printf("Data NS Before 0x%x SN 0x%x WE 0x%x EW 0x%x\n", updatedNorthSouth, updatedSouthNorth, updatedWestEast, updatedEastWest);
 
-		updateCarOnRoad(&updatedNorthSouth, &updatedSouthNorth, NSTL);
-		updateCarOnRoad(&updatedWestEast, &updatedEastWest, EWTL);
+		updateCarOnRoad(&updatedNorthSouth, &updatedSouthNorth, NST);
+		updateCarOnRoad(&updatedWestEast, &updatedEastWest, EWT);
 //		printf("Data NS After 0x%x SN 0x%x WE 0x%x EW 0x%x\n", updatedNorthSouth, updatedSouthNorth, updatedWestEast, updatedEastWest);
 
 		for (int i = 0; i < 8; i++) {   // update 8 column
@@ -396,10 +392,10 @@ void StartGenCarsRandomly(void *argument)
   {
     if (osMutexAcquire(myMutex01Handle, 0) == osOK) {
 		HAL_RNG_GenerateRandomNumber(&hrng, &myRandomNum);
-		randomCarGenerator.pos = myRandomNum%16;
-//		printf("Random Pos %d\n", randomCarGenerator.pos);
+		randomCarGenerator.ori = myRandomNum%16;
+//		printf("Random Pos %d\n", randomCarGenerator.ori);
 		for (int i = 0; i < 4; i++) {
-			bool isCarAdded = ((randomCarGenerator.pos >> (3-i)) & 1);
+			bool isCarAdded = ((randomCarGenerator.ori >> (3-i)) & 1);
 			if (i == 0) {// Add car from north
 			  bool isRearEmpty = !((carPositions[0] & 0x08) >> 3);
 			  if (isCarAdded && isRearEmpty) {
@@ -458,44 +454,44 @@ int _write(int file, char *ptr, int len)
   return len;
 }
 
-void updateTrafficLightState(trafficLight* inputTrafficLight){
+void updateTrafficLightState(traffic* inputTrafficLight){
 
-  if (inputTrafficLight->curState == LSR)
+  if (inputTrafficLight->curState == Red)
   {
     inputTrafficLight->prevState = inputTrafficLight->curState;
-    inputTrafficLight->curState = LSY;
-    printf("updateTrafficLightState LSR = %d %d\n", inputTrafficLight->prevState, inputTrafficLight->curState);
+    inputTrafficLight->curState = Yellow;
+    printf("updateTrafficLightState Red = %d %d\n", inputTrafficLight->prevState, inputTrafficLight->curState);
   }
-  else if (inputTrafficLight->curState == LSY)
+  else if (inputTrafficLight->curState == Yellow)
   {
-    if (inputTrafficLight->prevState == LSR)
+    if (inputTrafficLight->prevState == Red)
     {
       inputTrafficLight->prevState = inputTrafficLight->curState;
-      inputTrafficLight->curState = LSG;
-      printf("updateTrafficLightState LSY pR = %d %d\n", inputTrafficLight->prevState, inputTrafficLight->curState);
+      inputTrafficLight->curState = Green;
+      printf("updateTrafficLightState Yellow pR = %d %d\n", inputTrafficLight->prevState, inputTrafficLight->curState);
     }
     else
     {
       inputTrafficLight->prevState = inputTrafficLight->curState;
-      inputTrafficLight->curState = LSR;
-      printf("updateTrafficLightState LSY pG = %d %d\n", inputTrafficLight->prevState, inputTrafficLight->curState);
+      inputTrafficLight->curState = Red;
+      printf("updateTrafficLightState Yellow pG = %d %d\n", inputTrafficLight->prevState, inputTrafficLight->curState);
     }
   }
   else // Green
   {
     inputTrafficLight->prevState = inputTrafficLight->curState;
-    inputTrafficLight->curState = LSY;
-    printf("updateTrafficLightState LSG = %d %d\n", inputTrafficLight->prevState, inputTrafficLight->curState);
+    inputTrafficLight->curState = Yellow;
+    printf("updateTrafficLightState Green = %d %d\n", inputTrafficLight->prevState, inputTrafficLight->curState);
   }
 }
 
-uint32_t getDelayUpdateTrafficLightState(trafficLight inputTrafficLight) {
+uint32_t getDelayUpdateTrafficLightState(traffic inputTrafficLight) {
 
   uint32_t delayUpdate;
-  if (inputTrafficLight.curState == LSR) {
+  if (inputTrafficLight.curState == Red) {
     delayUpdate = redTimeout;
   }
-  else if (inputTrafficLight.curState == LSY) {
+  else if (inputTrafficLight.curState == Yellow) {
     delayUpdate = yellowTimeout;
   }
   else { // Green
@@ -505,28 +501,28 @@ uint32_t getDelayUpdateTrafficLightState(trafficLight inputTrafficLight) {
   return delayUpdate;
 }
 
-void displayTrafficLight(trafficLight inputTrafficLight) {
+void displayTrafficLight(traffic inputTrafficLight) {
   GPIO_TypeDef* R_GPIO_PORT = TL_NS_R_GPIO_Port;
   uint16_t R_PIN = TL_NS_R_Pin;
   GPIO_TypeDef* Y_GPIO_PORT = TL_NS_Y_GPIO_Port;
   uint16_t Y_PIN = TL_NS_Y_Pin;
   GPIO_TypeDef* G_GPIO_PORT = TL_NS_G_GPIO_Port;
   uint16_t G_PIN = TL_NS_G_Pin;
-  if (inputTrafficLight.pos == EW) {
+  if (inputTrafficLight.ori == EW) {
 	  R_GPIO_PORT = TL_EW_R_GPIO_Port;
 	  R_PIN = TL_EW_R_Pin;
 	  Y_GPIO_PORT = TL_EW_Y_GPIO_Port;
 	  Y_PIN = TL_EW_Y_Pin;
 	  G_GPIO_PORT = TL_EW_G_GPIO_Port;
 	  G_PIN = TL_EW_G_Pin;
-  } else if (inputTrafficLight.pos == SN) {
+  } else if (inputTrafficLight.ori == SN) {
 	  R_GPIO_PORT = TL_SN_R_GPIO_Port;
 	  R_PIN = TL_SN_R_Pin;
 	  Y_GPIO_PORT = TL_SN_Y_GPIO_Port;
 	  Y_PIN = TL_SN_Y_Pin;
 	  G_GPIO_PORT = TL_SN_G_GPIO_Port;
 	  G_PIN = TL_SN_G_Pin;
-  } else if (inputTrafficLight.pos == WE) {
+  } else if (inputTrafficLight.ori == WE) {
 	  R_GPIO_PORT = TL_WE_R_GPIO_Port;
 	  R_PIN = TL_WE_R_Pin;
 	  Y_GPIO_PORT = TL_WE_Y_GPIO_Port;
@@ -535,14 +531,14 @@ void displayTrafficLight(trafficLight inputTrafficLight) {
 	  G_PIN = TL_WE_G_Pin;
   }
 
-  if (inputTrafficLight.curState == LSR){
+  if (inputTrafficLight.curState == Red){
     HAL_GPIO_WritePin(R_GPIO_PORT, R_PIN, GPIO_PIN_SET); // LED ON
 	HAL_GPIO_WritePin(Y_GPIO_PORT, Y_PIN, GPIO_PIN_RESET); // LED OFF
 	HAL_GPIO_WritePin(G_GPIO_PORT, G_PIN, GPIO_PIN_RESET); // LED OFF
   }
-  else if (inputTrafficLight.curState == LSY)
+  else if (inputTrafficLight.curState == Yellow)
   {
-    if (inputTrafficLight.prevState == LSR)
+    if (inputTrafficLight.prevState == Red)
     {
     	HAL_GPIO_WritePin(R_GPIO_PORT, R_PIN, GPIO_PIN_SET); // LED ON
     }
@@ -597,25 +593,25 @@ void updateCarOnRoadWhileNotGreen(uint8_t* initialFirstTraffic, uint8_t* initial
   *initialSecondTraffic = (halfRear << 4) | halfFront;
 }
 
-void updateCarOnRoad(uint8_t* initialFirstTraffic, uint8_t* initialSecondTraffic, trafficLight inputTrafficLight) {
+void updateCarOnRoad(uint8_t* initialFirstTraffic, uint8_t* initialSecondTraffic, traffic inputTrafficLight) {
 
-  if (inputTrafficLight.curState == LSG)
+  if (inputTrafficLight.curState == Green)
   {
-//    printf("updateCarOnRoad LSG b 0x%x 0x%x\n", *initialFirstTraffic, *initialSecondTraffic);
+//    printf("updateCarOnRoad Green b 0x%x 0x%x\n", *initialFirstTraffic, *initialSecondTraffic);
     *initialFirstTraffic >>= 1;
     *initialSecondTraffic <<= 1;
-//    printf("updateCarOnRoad LSG a 0x%x 0x%x\n", *initialFirstTraffic, *initialSecondTraffic);
+//    printf("updateCarOnRoad Green a 0x%x 0x%x\n", *initialFirstTraffic, *initialSecondTraffic);
   }
-  else if (inputTrafficLight.curState == LSY && inputTrafficLight.prevState == LSG)
+  else if (inputTrafficLight.curState == Yellow && inputTrafficLight.prevState == Green)
   {
     updateCarOnRoadWhileNotGreen(initialFirstTraffic, initialSecondTraffic);
   }
   else
   {
-//    printf("updateCarOnRoad LSR b 0x%x 0x%x\n", *initialFirstTraffic, *initialSecondTraffic);
+//    printf("updateCarOnRoad Red b 0x%x 0x%x\n", *initialFirstTraffic, *initialSecondTraffic);
     *initialFirstTraffic &= 0xE7;
     *initialSecondTraffic &= 0xE7;
-//    printf("updateCarOnRoad LSR a 0x%x 0x%x\n", *initialFirstTraffic, *initialSecondTraffic);
+//    printf("updateCarOnRoad Red a 0x%x 0x%x\n", *initialFirstTraffic, *initialSecondTraffic);
     updateCarOnRoadWhileNotGreen(initialFirstTraffic, initialSecondTraffic);
   }
 }

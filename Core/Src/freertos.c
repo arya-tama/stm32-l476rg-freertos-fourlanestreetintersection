@@ -81,7 +81,7 @@ typedef struct{
 } traffic;
 
 typedef struct{
-  int ori;
+  int pos;
   int timeout;
 } carGenerator;
 
@@ -392,10 +392,10 @@ void StartGenCarsRandomly(void *argument)
   {
     if (osMutexAcquire(myMutex01Handle, 0) == osOK) {
 		HAL_RNG_GenerateRandomNumber(&hrng, &myRandomNum);
-		randomCarGenerator.ori = myRandomNum%16;
+		randomCarGenerator.pos = myRandomNum%16;
 //		printf("Random Pos %d\n", randomCarGenerator.ori);
 		for (int i = 0; i < 4; i++) {
-			bool isCarAdded = ((randomCarGenerator.ori >> (3-i)) & 1);
+			bool isCarAdded = ((randomCarGenerator.pos >> (3-i)) & 1);
 			if (i == 0) {// Add car from north
 			  bool isRearEmpty = !((carPositions[0] & 0x08) >> 3);
 			  if (isCarAdded && isRearEmpty) {
